@@ -19,6 +19,9 @@ saipe <- read_csv(file.path(read_dir, "saipe_county_clean.csv"))
 vera <-
     read_csv(file.path(read_dir, "vera_county_clean.csv")) |>
     select(matches("year|full_fips|state|county|total_prison.*rate"))
+vera_race <-
+    read_csv(file.path(read_dir, "vera_county_race_clean.csv")) |>
+    select(matches("year|full_fips|state|county|prison.*rate"))
 cdc_homicides <- read_csv(file.path(read_dir, "cdc_county_homicides_clean.csv"))
 
 ################################################################################
@@ -148,7 +151,7 @@ acs_paoc <-
 merge_ipumsTs_acs_paoc <- bind_rows(ipumsTs_paoc, acs_paoc)
 
 ################################################################################
-# Merge CBP and IPUMS time series data.
+# Merge CBP and IPUMS time series/PEP population data.
 merge_ipumsTs_cbp <-
     inner_join(
         cbp,
@@ -157,12 +160,41 @@ merge_ipumsTs_cbp <-
     ) |>
     mutate(
         nr_businesses_per10k = nr_businesses * 10000 / pop_nr_est,
-        nr_socialAssociations_per10k = nr_social_associations * 10000 / pop_nr_est,
-        nr_socialSupportServices_per10k = nr_social_support_services * 10000 / pop_nr_est,
-        nr_socialAssociationsAndSupport_per10k = nr_social_associations_and_support * 10000 / pop_nr_est,
-        nr_allSocialBeautyBusinesses_per10k = nr_all_social_and_beauty_businesses * 10000 / pop_nr_est
+        nr_socialAssociations_min_per10k = nr_social_associations_min * 10000 / pop_nr_est,
+        nr_socialSupportServices_min_per10k = nr_social_support_services_min * 10000 / pop_nr_est,
+        nr_socialAssociationsAndSupport_min_per10k = nr_social_associations_and_support_min * 10000 / pop_nr_est,
+        nr_allSocialBeautyBusinesses_min_per10k = nr_all_social_and_beauty_businesses_min * 10000 / pop_nr_est,
+        nr_socialAssociations_max_per10k = nr_social_associations_max * 10000 / pop_nr_est,
+        nr_socialSupportServices_max_per10k = nr_social_support_services_max * 10000 / pop_nr_est,
+        nr_socialAssociationsAndSupport_max_per10k = nr_social_associations_and_support_max * 10000 / pop_nr_est,
+        nr_allSocialBeautyBusinesses_max_per10k = nr_all_social_and_beauty_businesses_max * 10000 / pop_nr_est
     ) |>
-    select(-matches("businesses$|associations$|services$|support$|pop_nr_est"))
+    select(matches("year|full_fips|state|county|_per10k"))
+
+################################################################################
+# Merge CDC homicide data and IPUMS time series/PEP population data.
+# Interestingly, all the rows with missing population data also have missing
+# homicide data. We can use the population data provided by CDC.
+merge_ipumsTs_cdc_homicides <-
+    inner_join(
+        cdc_homicides,
+        select(merge_ipumsTs_pep, year, full_fips, state, county, pop_nr_est),
+        by = c("year", "full_fips", "state", "county")
+    ) |>
+    filter(Population != "Missing") |>
+    mutate(
+        Population = as.numeric(Population),
+        nr_homicides_per100k = homicides_final * 100000 / Population,
+        nr_homicides_max_per100k = homicides_max * 100000 / Population,
+        nr_homicides_min_per100k = homicides_min * 100000 / Population,
+        nr_homicides_3yr_avg_per100k = homicides_final_3yr_avg * 100000 / Population,
+        nr_homicides_max_3yr_avg_per100k = homicides_max_3yr_avg * 100000 / Population,
+        nr_homicides_min_3yr_avg_per100k = homicides_min_3yr_avg * 100000 / Population,
+        nr_homicides_5yr_avg_per100k = homicides_final_5yr_avg * 100000 / Population,
+        nr_homicides_max_5yr_avg_per100k = homicides_max_5yr_avg * 100000 / Population,
+        nr_homicides_min_5yr_avg_per100k = homicides_min_5yr_avg * 100000 / Population
+    ) |>
+    select(matches("year|full_fips|state|county|_per100k"))
 
 ################################################################################
 # Join together all data now with unique columns.
@@ -170,7 +202,7 @@ df_final <-
     list(
         acs_no_merge, ipumsTs_no_merge, merge_ipumsTs_acs_paoc,
         merge_ipumsTs_acs_renters_race, merge_ipumsTs_cbp, merge_ipumsTs_pep,
-        merge_ipumsTs_saipe, sahie, vera
+        merge_ipumsTs_saipe, sahie, vera, merge_ipumsTs_cdc_homicides
     ) |>
     reduce(
         function(x, y) {
@@ -195,8 +227,24 @@ df_final <-
         -singleDad_prcnt_est, -hhIncomeabove75_prcnt_est,
         -hhIncomeAbove75_prcnt_est_allAges_b,
         -hhIncomeAbove75_prcnt_est_allAges_w,
-        -hhIncomeAbove75_prcnt_est_allAges_h, -matches(".*_w")
+        -hhIncomeAbove75_prcnt_est_allAges_h, -matches(".*_w"),
+        -matches("^(lfpr|epr|ur).*(_f|_m)$"), -matches("insurance"),
+        -matches("uninsured"), -nr_homicides_per100k, -nr_homicides_3yr_avg_per100k,
+        -nr_homicides_5yr_avg_per100k
     )
 
 write_csv(df_final, here("3_merge_data", "output", "merged_data.csv"))
 gzip(here("3_merge_data", "output", "merged_data.csv"), remove = T, overwrite = T)
+
+################################################################################
+# Join together all data with race-specific prison admission outcomes.
+df_final_race <-
+    df_final |>
+    select(-total_prison_adm_rate15to64, -total_prison_adm_rateAll) |>
+    full_join(
+        vera_race |> filter(year >= 2010, year <= 2019),
+        by = c("year", "full_fips", "state", "county")
+    )
+
+write_csv(df_final_race, here("3_merge_data", "output", "merged_data_race.csv"))
+gzip(here("3_merge_data", "output", "merged_data_race.csv"), remove = T, overwrite = T)

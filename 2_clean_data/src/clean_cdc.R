@@ -85,7 +85,9 @@ cdc_homicides_clean <-
     # Recover homicide values and use them when official homicide values are missing.
     mutate(
         homicides_self = Deaths - nonHomicides,
-        homicides_final = if_else(is.na(homicides), homicides_self, homicides)
+        homicides_final = if_else(is.na(homicides), homicides_self, homicides),
+        state = str_sub(full_fips, 1, 2),
+        county = str_sub(full_fips, 3, 5)
     ) |>
     select(-nonHomicides, -Deaths, -homicides, -homicides_self) |>
     arrange(full_fips, year) |>
