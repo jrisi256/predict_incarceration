@@ -53,3 +53,8 @@ rsconnect/
 *.zip
 *.gz
 *.rds
+.positai
+*.xlsx
+*.rda
+*.Rdata
+*.dta

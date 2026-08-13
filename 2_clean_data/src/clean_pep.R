@@ -67,7 +67,7 @@ create_clean_pep_df <- function(df) {
         ) |>
         mutate(shannon_index_scaled = shannon_index / log(7, 2)) |>
         ungroup()
-    
+
     df <-
         df |>
         filter(age %in% c("All ages", "15-19 years", "20-24 years")) |>
@@ -272,10 +272,64 @@ clean_2000_2009 <-
 
 ################################################################################
 # Read in and clean/restructure the 2010 - 2019 data.
+# Aggregate counties 02063 and 02066 into 02261 (split in 2019).
 pep_2010_2019_county_df <-
     read_csv(file.path(read_dir, "pep_2010-2019_county.csv.gz"))
 
 clean_2010_2019 <-
+    pep_2010_2019_county_df |>
+    mutate(
+        year =
+            case_when(
+                YEAR == 1 ~  "4/1/2010 (Census)",
+                YEAR == 2 ~ "4/1/2010 (PEP)",
+                YEAR == 3 ~ "7/1/2010 (PEP)",
+                YEAR == 4 ~ "2011",
+                YEAR == 5 ~ "2012",
+                YEAR == 6 ~ "2013",
+                YEAR == 7 ~ "2014",
+                YEAR == 8 ~ "2015",
+                YEAR == 9 ~ "2016",
+                YEAR == 10 ~ "2017",
+                YEAR == 11 ~ "2018",
+                YEAR == 12 ~ "2019",
+                YEAR == 13 ~ "7/1/2020 (PEP)",
+            )
+    ) |>
+    standardize_age_2010_2024() |>
+    mutate(
+        county =
+            case_when(
+                state == "02" & county == "063" ~ "261",
+                state == "02" & county == "066" ~ "261",
+                T ~ county
+            ),
+        full_fips =
+            case_when(
+                full_fips == "02063" ~ "02261",
+                full_fips == "02066" ~ "02261",
+                T ~ full_fips
+            ),
+        year =
+            case_when(
+                year == "4/1/2010 (PEP)" & full_fips == "02261" ~ "2010",
+                year == "4/1/2010 (Census)" & full_fips == "02261" ~ "4/1/2010 (PEP)",
+                T ~ year
+            )
+    ) |>
+    filter(!(year %in% c("4/1/2010 (PEP)", "7/1/2010 (PEP)", "7/1/2020 (PEP)"))) |>
+    mutate(
+        year = if_else(year == "4/1/2010 (Census)", "2010", year),
+        year = as.numeric(year)
+    ) |>
+    summarise(
+        across(-matches("state|county|year|age|fips"), function(col) {sum(col)}),
+        .by = c(state, county, full_fips, year, YEAR, AGEGRP, age)
+    ) |>
+    create_clean_pep_df()
+
+# Calculate location quotient.
+state_df <-
     pep_2010_2019_county_df |>
     mutate(
         year =
@@ -303,7 +357,43 @@ clean_2010_2019 <-
         year = if_else(year == "4/1/2010 (Census)", "2010", year),
         year = as.numeric(year)
     ) |>
-    create_clean_pep_df()
+    filter(age == "All ages") |>
+    mutate(
+        pop_nr_est_allAges_w = NHBA_MALE + NHWA_FEMALE,
+        pop_nr_est_allAges_b = NHBA_MALE + NHBA_FEMALE,
+        pop_nr_est_allAges_h = H_MALE + H_FEMALE,
+        pop_nr_est_allAges_aian = NHIA_MALE + NHIA_FEMALE,
+        pop_nr_est_allAges_a = NHAA_MALE + NHAA_FEMALE,
+        pop_nr_est_allAges_nhpi = NHNA_MALE + NHNA_FEMALE,
+        pop_nr_est_allAges_m = NHTOM_MALE + NHTOM_FEMALE
+    ) |>
+    select(matches("state|pop_"), year) |>
+    pivot_longer(
+        matches("pop"), names_to = "race_ethnicity", values_to = "pop"
+    ) |>
+    summarise(
+        state_pop = sum(pop, na.rm = T),
+        .by = c(state, year, race_ethnicity)
+    ) |>
+    mutate(prcnt = state_pop / sum(state_pop), .by = c(state, year)) |>
+    pivot_wider(
+        id_cols = c("state", "year"),
+        values_from = prcnt,
+        names_from = race_ethnicity
+    ) |>
+    rename_with(
+        .fn = function(col) {paste0(str_replace(col, "_nr_", "_prcnt_"), "_state")},
+        matches("_nr_")
+    )
+
+clean_2010_2019_lq <-
+    full_join(clean_2010_2019, state_df, by = c("state", "year")) |>
+    mutate(
+        lq_black = pop_prcnt_est_allAges_b / pop_prcnt_est_allAges_b_state,
+        lq_white = pop_prcnt_est_allAges_w / pop_prcnt_est_allAges_w_state,
+        lq_hisp = pop_prcnt_est_allAges_h / pop_prcnt_est_allAges_h_state
+    ) |>
+    select(-matches("_state"))
 
 ################################################################################
 # Read in and clean/restructure the 2020 - 2024 data.
@@ -334,8 +424,9 @@ clean_2020_2024 <-
 ################################################################################
 # Join together all the decades and save the data.
 clean_pep_all <-
-    list(clean_1990_2000, clean_2000_2009, clean_2010_2019, clean_2020_2024) |>
+    list(clean_1990_2000, clean_2000_2009, clean_2010_2019_lq, clean_2020_2024) |>
     bind_rows() |>
-    select(matches("pop_nr_est$|prcnt|index|year|fips|state|county"))
+    select(matches("pop_nr_est$|prcnt|index|year|fips|state|county|lq")) |>
+    select(-shannon_index)
 
 write_csv(clean_pep_all, file.path(save_dir, "pep_county_clean.csv"))

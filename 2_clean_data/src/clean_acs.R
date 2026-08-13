@@ -6,138 +6,116 @@ library(R.utils)
 
 read_dir <- here("1_get_data", "output")
 save_dir <- here("2_clean_data", "output")
-acs_df <- read_csv(file.path(read_dir, "acs_county.csv.gz"))
+
+################################################################################
+# Read in ACS data.
+# County 51515 was annexed by county 51019 in 2013.
+acs_df <-
+    read_csv(file.path(read_dir, "acs_county.csv.gz")) |>
+    mutate(
+        full_fips = if_else(full_fips == "51515", "51019", full_fips),
+        county = if_else(state == "51" & county == "515", "019", county)
+    )
 
 ################################################################################
 # Clean educational data.
 df_edu <-
     acs_df |>
     mutate(
-        lessThanHs_prcnt_est_25older_b =
-            if_else(totalBlack25AndOlder != 0, (maleBlackLessThanHS + femaleBlackLessThanHS) / totalBlack25AndOlder, 0),
-        hs_prcnt_est_25older_b =
-            if_else(totalBlack25AndOlder != 0, (maleBlackHS + femaleBlackHS) / totalBlack25AndOlder, 0),
-        someCollege_prcnt_est_25older_b =
-            if_else(totalBlack25AndOlder != 0, (maleBlackSomeCollege + femaleBlackSomeCollege) / totalBlack25AndOlder, 0),
-        college_prcnt_est_25older_b = 
-            if_else(totalBlack25AndOlder != 0, (maleBlackCollege + femaleBlackCollege) / totalBlack25AndOlder, 0),
-        lessThanHs_prcnt_est_25older_h =
-            if_else(totalHisp25AndOlder != 0, (maleHispLessThanHS + femaleHispLessThanHS) / totalHisp25AndOlder, 0),
-        hs_prcnt_est_25older_h =
-            if_else(totalHisp25AndOlder != 0, (maleHispHS + femaleHispHS) / totalHisp25AndOlder, 0),
-        someCollege_prcnt_est_25older_h =
-            if_else(totalHisp25AndOlder != 0, (maleHispSomeCollege + femaleHispSomeCollege) / totalHisp25AndOlder, 0),
-        college_prcnt_est_25older_h = 
-            if_else(totalHisp25AndOlder != 0, (maleHispCollege + femaleHispCollege) / totalHisp25AndOlder, 0),
-        lessThanHs_prcnt_est_25older_w =
-            if_else(totalWhite25AndOlder != 0, (maleWhiteLessThanHS + femaleWhiteLessThanHS) / totalWhite25AndOlder, 0),
-        hs_prcnt_est_25older_w =
-            if_else(totalWhite25AndOlder != 0, (maleWhiteHS + femaleWhiteHS) / totalWhite25AndOlder, 0),
-        someCollege_prcnt_est_25older_w =
-            if_else(totalWhite25AndOlder != 0, (maleWhiteSomeCollege + femaleWhiteSomeCollege) / totalWhite25AndOlder, 0),
-        college_prcnt_est_25older_w = 
-            if_else(totalWhite25AndOlder != 0, (maleWhiteCollege + femaleWhiteCollege) / totalWhite25AndOlder, 0),
-        blackToWhiteCollege_ratio_est =
-            if_else(college_prcnt_est_25older_w != 0, college_prcnt_est_25older_b / college_prcnt_est_25older_w, 0),
-        hispToWhiteCollege_ratio_est =
-            if_else(college_prcnt_est_25older_w != 0, college_prcnt_est_25older_h / college_prcnt_est_25older_w, 0)
+        lessThanHs_prcnt_est_25older_b = (maleBlackLessThanHS + femaleBlackLessThanHS) / totalBlack25AndOlder,
+        hs_prcnt_est_25older_b = (maleBlackHS + femaleBlackHS) / totalBlack25AndOlder,
+        someCollege_prcnt_est_25older_b = (maleBlackSomeCollege + femaleBlackSomeCollege) / totalBlack25AndOlder,
+        college_prcnt_est_25older_b = (maleBlackCollege + femaleBlackCollege) / totalBlack25AndOlder,
+        lessThanHs_prcnt_est_25older_h = (maleHispLessThanHS + femaleHispLessThanHS) / totalHisp25AndOlder,
+        hs_prcnt_est_25older_h = (maleHispHS + femaleHispHS) / totalHisp25AndOlder,
+        someCollege_prcnt_est_25older_h = (maleHispSomeCollege + femaleHispSomeCollege) / totalHisp25AndOlder,
+        college_prcnt_est_25older_h = (maleHispCollege + femaleHispCollege) / totalHisp25AndOlder,
+        lessThanHs_prcnt_est_25older_w = (maleWhiteLessThanHS + femaleWhiteLessThanHS) / totalWhite25AndOlder,
+        hs_prcnt_est_25older_w = (maleWhiteHS + femaleWhiteHS) / totalWhite25AndOlder,
+        someCollege_prcnt_est_25older_w = (maleWhiteSomeCollege + femaleWhiteSomeCollege) / totalWhite25AndOlder,
+        college_prcnt_est_25older_w = (maleWhiteCollege + femaleWhiteCollege) / totalWhite25AndOlder,
+        blackToWhiteCollege_diff_est = college_prcnt_est_25older_b - college_prcnt_est_25older_w,
+        hispToWhiteCollege_diff_est = college_prcnt_est_25older_h - college_prcnt_est_25older_w
     ) |>
-    select(matches("^year$|full_fips|^state$|^county$|prcnt_est|ratio"))
+    select(matches("^year$|full_fips|^state$|^county$|diff_est"))
 
 ################################################################################
 # Clean poverty data.
 df_poverty <-
     acs_df |>
     mutate(
-        inPoverty_prcnt_est_allAges_b =
-            if_else(black_pop_povertyStatusCalculable != 0, black_inPoverty / black_pop_povertyStatusCalculable, 0),
-        inPoverty_prcnt_est_allAges_w =
-            if_else(white_pop_povertyStatusCalculable != 0, white_inPoverty / white_pop_povertyStatusCalculable, 0),
-        inPoverty_prcnt_est_allAges_h =
-            if_else(hisp_pop_povertyStatusCalculable != 0, hisp_inPoverty / hisp_pop_povertyStatusCalculable, 0),
-        blackToWhitePoverty_ratio_est =
-            if_else(inPoverty_prcnt_est_allAges_w != 0, inPoverty_prcnt_est_allAges_b / inPoverty_prcnt_est_allAges_w, 0),
-        hispToWhitePoverty_ratio_est =
-            if_else(inPoverty_prcnt_est_allAges_w != 0, inPoverty_prcnt_est_allAges_h / inPoverty_prcnt_est_allAges_w, 0)
+        inPoverty_prcnt_est_allAges_b = black_inPoverty / black_pop_povertyStatusCalculable,
+        inPoverty_prcnt_est_allAges_w = white_inPoverty / white_pop_povertyStatusCalculable,
+        inPoverty_prcnt_est_allAges_h = hisp_inPoverty / hisp_pop_povertyStatusCalculable,
+        blackToWhitePoverty_diff_est = inPoverty_prcnt_est_allAges_b - inPoverty_prcnt_est_allAges_w,
+        hispToWhitePoverty_diff_est = inPoverty_prcnt_est_allAges_h - inPoverty_prcnt_est_allAges_w
     ) |>
-    select(matches("^year$|full_fips|^state$|^county$|prcnt_est|ratio"))
+    select(matches("^year$|full_fips|^state$|^county$|diff_est"))
 
 ################################################################################
 # Clean income, poverty, and welfare data.
 df_income_black <-
     acs_df |>
     mutate(
-        hhIncomeBelow10_prcnt_est_allAges_b = if_else(total_nr_black_hh != 0, black_below10 / total_nr_black_hh, 0),
-        hhIncome10to15_prcnt_est_allAges_b = if_else(total_nr_black_hh != 0, black_from10to15 / total_nr_black_hh, 0),
-        hhIncome15to20_prcnt_est_allAges_b = if_else(total_nr_black_hh != 0, black_from15to20 / total_nr_black_hh, 0),
-        hhIncome20to25_prcnt_est_allAges_b = if_else(total_nr_black_hh != 0, black_from20to25 / total_nr_black_hh, 0),
-        hhIncome25to30_prcnt_est_allAges_b = if_else(total_nr_black_hh != 0, black_from25to30 / total_nr_black_hh, 0),
-        hhIncome30to35_prcnt_est_allAges_b = if_else(total_nr_black_hh != 0, black_from30to35 / total_nr_black_hh, 0),
-        hhIncome35to40_prcnt_est_allAges_b = if_else(total_nr_black_hh != 0, black_from35to40 / total_nr_black_hh, 0),
-        hhIncome40to50_prcnt_est_allAges_b = if_else(total_nr_black_hh != 0, (black_from40to45 + black_from45to50) / total_nr_black_hh, 0),
-        hhIncome50to75_prcnt_est_allAges_b = if_else(total_nr_black_hh != 0, (black_from50to60 + black_from60to75) / total_nr_black_hh, 0),
-        hhIncome75to100_prcnt_est_allAges_b = if_else(total_nr_black_hh != 0, black_from75to100 / total_nr_black_hh, 0),
-        hhIncome100to125_prcnt_est_allAges_b = if_else(total_nr_black_hh != 0, black_from100to125 / total_nr_black_hh, 0),
-        hhIncome125to150_prcnt_est_allAges_b = if_else(total_nr_black_hh != 0, black_from125to150 / total_nr_black_hh, 0),
-        hhIncomeAbove150_prcnt_est_allAges_b = if_else(total_nr_black_hh != 0, (black_from150to200 + black_above200) / total_nr_black_hh, 0),
+        hhIncomeBelow10_prcnt_est_allAges_b = black_below10 / total_nr_black_hh,
+        hhIncome10to15_prcnt_est_allAges_b = black_from10to15 / total_nr_black_hh,
+        hhIncome15to20_prcnt_est_allAges_b = black_from15to20 / total_nr_black_hh,
+        hhIncome20to25_prcnt_est_allAges_b = black_from20to25 / total_nr_black_hh,
+        hhIncome25to30_prcnt_est_allAges_b = black_from25to30 / total_nr_black_hh,
+        hhIncome30to35_prcnt_est_allAges_b = black_from30to35 / total_nr_black_hh,
+        hhIncome35to40_prcnt_est_allAges_b = black_from35to40 / total_nr_black_hh,
+        hhIncome40to50_prcnt_est_allAges_b = (black_from40to45 + black_from45to50) / total_nr_black_hh,
+        hhIncome50to75_prcnt_est_allAges_b = (black_from50to60 + black_from60to75) / total_nr_black_hh,
+        hhIncome75to100_prcnt_est_allAges_b = black_from75to100 / total_nr_black_hh,
+        hhIncome100to125_prcnt_est_allAges_b = black_from100to125 / total_nr_black_hh,
+        hhIncome125to150_prcnt_est_allAges_b = black_from125to150 / total_nr_black_hh,
+        hhIncomeAbove150_prcnt_est_allAges_b = (black_from150to200 + black_above200) / total_nr_black_hh,
         hhIncomeAbove75_prcnt_est_allAges_b =
-            if_else(
-                total_nr_black_hh != 0,
-                (black_from75to100 + black_from100to125 + black_from125to150 + black_from150to200 + black_above200) / total_nr_black_hh,
-                0
-            )
+            (black_from75to100 + black_from100to125 + black_from125to150 + black_from150to200 + black_above200) / total_nr_black_hh
     ) |>
-    select(matches("^year$|full_fips|^state$|^county$|prcnt_est|ratio"))
+    select(matches("^year$|full_fips|^state$|^county$|prcnt_est|diff_est"))
 
 df_income_white <-
     acs_df |>
     mutate(
-        hhIncomeBelow10_prcnt_est_allAges_w = if_else(total_nr_white_hh != 0, white_below10 / total_nr_white_hh, 0),
-        hhIncome10to15_prcnt_est_allAges_w = if_else(total_nr_white_hh != 0, white_from10to15 / total_nr_white_hh, 0),
-        hhIncome15to20_prcnt_est_allAges_w = if_else(total_nr_white_hh != 0, white_from15to20 / total_nr_white_hh, 0),
-        hhIncome20to25_prcnt_est_allAges_w = if_else(total_nr_white_hh != 0, white_from20to25 / total_nr_white_hh, 0),
-        hhIncome25to30_prcnt_est_allAges_w = if_else(total_nr_white_hh != 0, white_from25to30 / total_nr_white_hh, 0),
-        hhIncome30to35_prcnt_est_allAges_w = if_else(total_nr_white_hh != 0, white_from30to35 / total_nr_white_hh, 0),
-        hhIncome35to40_prcnt_est_allAges_w = if_else(total_nr_white_hh != 0, white_from35to40 / total_nr_white_hh, 0),
-        hhIncome40to50_prcnt_est_allAges_w = if_else(total_nr_white_hh != 0, (white_from40to45 + white_from45to50) / total_nr_white_hh, 0),
-        hhIncome50to75_prcnt_est_allAges_w = if_else(total_nr_white_hh != 0, (white_from50to60 + white_from60to75) / total_nr_white_hh, 0),
-        hhIncome75to100_prcnt_est_allAges_w = if_else(total_nr_white_hh != 0, white_from75to100 / total_nr_white_hh, 0),
-        hhIncome100to125_prcnt_est_allAges_w = if_else(total_nr_white_hh != 0, white_from100to125 / total_nr_white_hh, 0),
-        hhIncome125to150_prcnt_est_allAges_w = if_else(total_nr_white_hh != 0, white_from125to150 / total_nr_white_hh, 0),
-        hhIncomeAbove150_prcnt_est_allAges_w = if_else(total_nr_white_hh != 0, (white_from150to200 + white_above200) / total_nr_white_hh, 0),
+        hhIncomeBelow10_prcnt_est_allAges_w = white_below10 / total_nr_white_hh,
+        hhIncome10to15_prcnt_est_allAges_w = white_from10to15 / total_nr_white_hh,
+        hhIncome15to20_prcnt_est_allAges_w = white_from15to20 / total_nr_white_hh,
+        hhIncome20to25_prcnt_est_allAges_w = white_from20to25 / total_nr_white_hh,
+        hhIncome25to30_prcnt_est_allAges_w = white_from25to30 / total_nr_white_hh,
+        hhIncome30to35_prcnt_est_allAges_w = white_from30to35 / total_nr_white_hh,
+        hhIncome35to40_prcnt_est_allAges_w = white_from35to40 / total_nr_white_hh,
+        hhIncome40to50_prcnt_est_allAges_w =(white_from40to45 + white_from45to50) / total_nr_white_hh,
+        hhIncome50to75_prcnt_est_allAges_w = (white_from50to60 + white_from60to75) / total_nr_white_hh,
+        hhIncome75to100_prcnt_est_allAges_w = white_from75to100 / total_nr_white_hh,
+        hhIncome100to125_prcnt_est_allAges_w = white_from100to125 / total_nr_white_hh,
+        hhIncome125to150_prcnt_est_allAges_w = white_from125to150 / total_nr_white_hh,
+        hhIncomeAbove150_prcnt_est_allAges_w = (white_from150to200 + white_above200) / total_nr_white_hh,
         hhIncomeAbove75_prcnt_est_allAges_w =
-            if_else(
-                total_nr_white_hh != 0,
-                (white_from75to100 + white_from100to125 + white_from125to150 + white_from150to200 + white_above200) / total_nr_white_hh,
-                0
-            )
+            (white_from75to100 + white_from100to125 + white_from125to150 + white_from150to200 + white_above200) / total_nr_white_hh
     ) |>
-    select(matches("^year$|full_fips|^state$|^county$|prcnt_est|ratio"))
+    select(matches("^year$|full_fips|^state$|^county$|prcnt_est|diff_est"))
 
 df_income_hisp <-
     acs_df |>
     mutate(
-        hhIncomeBelow10_prcnt_est_allAges_h = if_else(total_nr_hisp_hh != 0, hisp_below10 / total_nr_hisp_hh, 0),
-        hhIncome10to15_prcnt_est_allAges_h = if_else(total_nr_hisp_hh != 0, hisp_from10to15 / total_nr_hisp_hh, 0),
-        hhIncome15to20_prcnt_est_allAges_h = if_else(total_nr_hisp_hh != 0, hisp_from15to20 / total_nr_hisp_hh, 0),
-        hhIncome20to25_prcnt_est_allAges_h = if_else(total_nr_hisp_hh != 0, hisp_from20to25 / total_nr_hisp_hh, 0),
-        hhIncome25to30_prcnt_est_allAges_h = if_else(total_nr_hisp_hh != 0, hisp_from25to30 / total_nr_hisp_hh, 0),
-        hhIncome30to35_prcnt_est_allAges_h = if_else(total_nr_hisp_hh != 0, hisp_from30to35 / total_nr_hisp_hh, 0),
-        hhIncome35to40_prcnt_est_allAges_h = if_else(total_nr_hisp_hh != 0, hisp_from35to40 / total_nr_hisp_hh, 0),
-        hhIncome40to50_prcnt_est_allAges_h = if_else(total_nr_hisp_hh != 0, (hisp_from40to45 + hisp_from45to50) / total_nr_hisp_hh, 0),
-        hhIncome50to75_prcnt_est_allAges_h = if_else(total_nr_hisp_hh != 0, (hisp_from50to60 + hisp_from60to75) / total_nr_hisp_hh, 0),
-        hhIncome75to100_prcnt_est_allAges_h = if_else(total_nr_hisp_hh != 0, hisp_from75to100 / total_nr_hisp_hh, 0),
-        hhIncome100to125_prcnt_est_allAges_h = if_else(total_nr_hisp_hh != 0, hisp_from100to125 / total_nr_hisp_hh, 0),
-        hhIncome125to150_prcnt_est_allAges_h = if_else(total_nr_hisp_hh != 0, hisp_from125to150 / total_nr_hisp_hh, 0),
-        hhIncomeAbove150_prcnt_est_allAges_h = if_else(total_nr_hisp_hh != 0, (hisp_from150to200 + hisp_above200) / total_nr_hisp_hh, 0),
+        hhIncomeBelow10_prcnt_est_allAges_h = hisp_below10 / total_nr_hisp_hh,
+        hhIncome10to15_prcnt_est_allAges_h = hisp_from10to15 / total_nr_hisp_hh,
+        hhIncome15to20_prcnt_est_allAges_h = hisp_from15to20 / total_nr_hisp_hh,
+        hhIncome20to25_prcnt_est_allAges_h = hisp_from20to25 / total_nr_hisp_hh,
+        hhIncome25to30_prcnt_est_allAges_h = hisp_from25to30 / total_nr_hisp_hh,
+        hhIncome30to35_prcnt_est_allAges_h = hisp_from30to35 / total_nr_hisp_hh,
+        hhIncome35to40_prcnt_est_allAges_h = hisp_from35to40 / total_nr_hisp_hh,
+        hhIncome40to50_prcnt_est_allAges_h = (hisp_from40to45 + hisp_from45to50) / total_nr_hisp_hh,
+        hhIncome50to75_prcnt_est_allAges_h = (hisp_from50to60 + hisp_from60to75) / total_nr_hisp_hh,
+        hhIncome75to100_prcnt_est_allAges_h = hisp_from75to100 / total_nr_hisp_hh,
+        hhIncome100to125_prcnt_est_allAges_h = hisp_from100to125 / total_nr_hisp_hh,
+        hhIncome125to150_prcnt_est_allAges_h = hisp_from125to150 / total_nr_hisp_hh,
+        hhIncomeAbove150_prcnt_est_allAges_h = (hisp_from150to200 + hisp_above200) / total_nr_hisp_hh,
         hhIncomeAbove75_prcnt_est_allAges_h =
-            if_else(
-                total_nr_hisp_hh != 0,
-                (hisp_from75to100 + hisp_from100to125 + hisp_from125to150 + hisp_from150to200 + hisp_above200) / total_nr_hisp_hh,
-                0
-            )
+            (hisp_from75to100 + hisp_from100to125 + hisp_from125to150 + hisp_from150to200 + hisp_above200) / total_nr_hisp_hh
     ) |>
-    select(matches("^year$|full_fips|^state$|^county$|prcnt_est|ratio"))
+    select(matches("^year$|full_fips|^state$|^county$|prcnt_est|diff_est"))
 
 df_median_income <-
     acs_df |>
@@ -145,10 +123,10 @@ df_median_income <-
         hhIncome_median_est_allAges_b = if_else(black_medianHHIncome < 0, NA, black_medianHHIncome),
         hhIncome_median_est_allAges_w = if_else(white_medianHHIncome < 0, NA, white_medianHHIncome),
         hhIncome_median_est_allAges_h = if_else(hisp_medianHHIncome < 0, NA, hisp_medianHHIncome),
-        medianHhIncomeBlackToWhite_ratio_est = hhIncome_median_est_allAges_b / hhIncome_median_est_allAges_w,
-        medianHhIncomeHispToWhite_ratio_est = hhIncome_median_est_allAges_h / hhIncome_median_est_allAges_w
+        medianHhIncomeBlackToWhite_prcnt_est = (hhIncome_median_est_allAges_w - hhIncome_median_est_allAges_b) / hhIncome_median_est_allAges_b,
+        medianHhIncomeHispToWhite_prcnt_est = (hhIncome_median_est_allAges_w - hhIncome_median_est_allAges_h) / hhIncome_median_est_allAges_h
     ) |>
-    select(matches("^year$|full_fips|^state$|^county$|median_est|ratio"))
+    select(matches("^year$|full_fips|^state$|^county$|medianHhIncome.*prcnt"))
 
 df_welfare <-
     acs_df |>
@@ -171,15 +149,13 @@ df_income_inequality <-
 df_snap <-
     acs_df |>
     mutate(
-        hhSnap_prcnt_est_allAges_b = if_else(total_nr_black_hh != 0, blackHH_Snap / total_nr_black_hh, 0),
-        hhSnap_prcnt_est_allAges_w = if_else(total_nr_white_hh != 0, whiteHH_Snap / total_nr_white_hh, 0),
-        hhSnap_prcnt_est_allAges_h = if_else(total_nr_hisp_hh != 0, hispHH_Snap / total_nr_hisp_hh, 0),
-        hhSnapBlackToWhite_ratio_est =
-            if_else(hhSnap_prcnt_est_allAges_w != 0, hhSnap_prcnt_est_allAges_b / hhSnap_prcnt_est_allAges_w, 0),
-        hhSnapHispToWhite_ratio_est =
-            if_else(hhSnap_prcnt_est_allAges_w != 0, hhSnap_prcnt_est_allAges_h / hhSnap_prcnt_est_allAges_w, 0)
+        hhSnap_prcnt_est_allAges_b = blackHH_Snap / total_nr_black_hh,
+        hhSnap_prcnt_est_allAges_w = whiteHH_Snap / total_nr_white_hh,
+        hhSnap_prcnt_est_allAges_h = hispHH_Snap / total_nr_hisp_hh,
+        hhSnapBlackToWhite_diff_est = hhSnap_prcnt_est_allAges_b - hhSnap_prcnt_est_allAges_w,
+        hhSnapHispToWhite_diff_est = hhSnap_prcnt_est_allAges_h - hhSnap_prcnt_est_allAges_w
     ) |>
-    select(matches("^year$|full_fips|^state$|^county$|prcnt_est|ratio"))
+    select(matches("^year$|full_fips|^state$|^county$|diff_est"))
 
 ################################################################################
 # Clean labor data.
@@ -198,11 +174,9 @@ df_labor <-
             black_employed_male_16to64 + black_employed_male_65andOlder +
             black_employed_female_16to64 + black_employed_female_65andOlder,
         nr_total_blackCivilian_16andOlder_pop =  black_pop_male_16andOlder + black_pop_female_16andOlder,
-        ur_prcnt_est_16andOlder_b = if_else(nr_civilianLaborForceBlack != 0, nr_unemployed_black / nr_civilianLaborForceBlack, 0),
-        lfpr_prcnt_est_16andOlder_b =
-            if_else(nr_total_blackCivilian_16andOlder_pop != 0, nr_civilianLaborForceBlack / nr_total_blackCivilian_16andOlder_pop, 0),
-        epr_prcnt_est_16andOlder_b =
-            if_else(nr_total_blackCivilian_16andOlder_pop != 0, nr_employed_black/ nr_total_blackCivilian_16andOlder_pop, 0),
+        ur_prcnt_est_16andOlder_b = nr_unemployed_black / nr_civilianLaborForceBlack,
+        lfpr_prcnt_est_16andOlder_b = nr_civilianLaborForceBlack / nr_total_blackCivilian_16andOlder_pop,
+        epr_prcnt_est_16andOlder_b = nr_employed_black/ nr_total_blackCivilian_16andOlder_pop,
         nr_employed_white =
             white_employed_male_16to64 + white_employed_male_65andOlder +
             white_employed_female_16to64 + white_employed_female_65andOlder,
@@ -215,11 +189,9 @@ df_labor <-
             white_employed_male_16to64 + white_employed_male_65andOlder +
             white_employed_female_16to64 + white_employed_female_65andOlder,
         nr_total_whiteCivilian_16andOlder_pop =  white_pop_male_16andOlder + white_pop_female_16andOlder,
-        ur_prcnt_est_16andOlder_w = if_else(nr_civilianLaborForceWhite != 0, nr_unemployed_white / nr_civilianLaborForceWhite, 0),
-        lfpr_prcnt_est_16andOlder_w =
-            if_else(nr_total_whiteCivilian_16andOlder_pop != 0, nr_civilianLaborForceWhite / nr_total_whiteCivilian_16andOlder_pop, 0),
-        epr_prcnt_est_16andOlder_w =
-            if_else(nr_total_whiteCivilian_16andOlder_pop != 0, nr_employed_white/ nr_total_whiteCivilian_16andOlder_pop, 0),
+        ur_prcnt_est_16andOlder_w = nr_unemployed_white / nr_civilianLaborForceWhite,
+        lfpr_prcnt_est_16andOlder_w = nr_civilianLaborForceWhite / nr_total_whiteCivilian_16andOlder_pop,
+        epr_prcnt_est_16andOlder_w = nr_employed_white/ nr_total_whiteCivilian_16andOlder_pop,
         nr_employed_hisp =
             hisp_employed_male_16to64 + hisp_employed_male_65andOlder +
             hisp_employed_female_16to64 + hisp_employed_female_65andOlder,
@@ -232,21 +204,15 @@ df_labor <-
             hisp_employed_male_16to64 + hisp_employed_male_65andOlder +
             hisp_employed_female_16to64 + hisp_employed_female_65andOlder,
         nr_total_hispCivilian_16andOlder_pop =  hisp_pop_male_16andOlder + hisp_pop_female_16andOlder,
-        ur_prcnt_est_16andOlder_h = if_else(nr_civilianLaborForceHisp != 0, nr_unemployed_hisp / nr_civilianLaborForceHisp, 0),
-        lfpr_prcnt_est_16andOlder_h =
-            if_else(nr_total_hispCivilian_16andOlder_pop != 0, nr_civilianLaborForceHisp / nr_total_hispCivilian_16andOlder_pop, 0),
-        epr_prcnt_est_16andOlder_h =
-            if_else(nr_total_hispCivilian_16andOlder_pop != 0, nr_employed_hisp/ nr_total_hispCivilian_16andOlder_pop, 0),
-        lfprBlackToWhite_ratio_est_16andOlder =
-            if_else(lfpr_prcnt_est_16andOlder_w != 0, lfpr_prcnt_est_16andOlder_b / lfpr_prcnt_est_16andOlder_w, 0),
-        urBlackToWhite_ratio_est_16andOlder =
-            if_else(ur_prcnt_est_16andOlder_w != 0, ur_prcnt_est_16andOlder_b / ur_prcnt_est_16andOlder_w, 0),
-        lfprHispToWhite_ratio_est_16andOlder =
-            if_else(lfpr_prcnt_est_16andOlder_w != 0, lfpr_prcnt_est_16andOlder_h / lfpr_prcnt_est_16andOlder_w, 0),
-        urHispToWhite_ratio_est_16andOlder =
-            if_else(ur_prcnt_est_16andOlder_w != 0, ur_prcnt_est_16andOlder_h / ur_prcnt_est_16andOlder_w, 0)
+        ur_prcnt_est_16andOlder_h = nr_unemployed_hisp / nr_civilianLaborForceHisp,
+        lfpr_prcnt_est_16andOlder_h = nr_civilianLaborForceHisp / nr_total_hispCivilian_16andOlder_pop,
+        epr_prcnt_est_16andOlder_h = nr_employed_hisp/ nr_total_hispCivilian_16andOlder_pop,
+        lfprBlackToWhite_diff_est_16andOlder = lfpr_prcnt_est_16andOlder_b - lfpr_prcnt_est_16andOlder_w,
+        urBlackToWhite_diff_est_16andOlder = ur_prcnt_est_16andOlder_b - ur_prcnt_est_16andOlder_w,
+        lfprHispToWhite_diff_est_16andOlder = lfpr_prcnt_est_16andOlder_h - lfpr_prcnt_est_16andOlder_w,
+        urHispToWhite_diff_est_16andOlder = ur_prcnt_est_16andOlder_h - ur_prcnt_est_16andOlder_w
     ) |>
-    select(matches("^year$|full_fips|^state$|^county$|prcnt_est|ratio"))
+    select(matches("^year$|full_fips|^state$|^county$|diff_est"))
 
 ################################################################################
 # Housing problems, housing costs, and housing value data.
@@ -280,42 +246,31 @@ df_housing_costs <-
 df_vehicle <-
     acs_df |>
     mutate(
-        hhOwnsNoVehicle_prcnt_est = if_else(total_nr_hh != 0, (owner_no_vehicle + renter_no_vehicle) / total_nr_hh, 0),
-        hhOwns1Vehicle_prcnt_est = if_else(total_nr_hh != 0, (owner_one_vehicle + renter_one_vehicle) / total_nr_hh, 0),
-        hhOwns2Vehicle_prcnt_est = if_else(total_nr_hh != 0, (owner_two_vehicle + renter_no_vehicle) / total_nr_hh, 0),
-        hhOwns3Vehicle_prcnt_est = if_else(total_nr_hh != 0, (owner_three_vehicle + renter_no_vehicle) / total_nr_hh, 0),
-        hhOwns4Vehicle_prcnt_est = if_else(total_nr_hh != 0, (owner_four_vehicle + renter_no_vehicle) / total_nr_hh, 0),
-        hhOwns5orMoreVehicle_prcnt_est = if_else(total_nr_hh != 0, (owner_fiveOrMore_vehicle + renter_fiveOrMore_vehicle) / total_nr_hh, 0)
+        hhOwnsNoVehicle_prcnt_est = (owner_no_vehicle + renter_no_vehicle) / total_nr_hh,
+        hhOwns1Vehicle_prcnt_est = (owner_one_vehicle + renter_one_vehicle) / total_nr_hh,
+        hhOwns2Vehicle_prcnt_est = (owner_two_vehicle + renter_no_vehicle) / total_nr_hh,
+        hhOwns3Vehicle_prcnt_est = (owner_three_vehicle + renter_no_vehicle) / total_nr_hh,
+        hhOwns4Vehicle_prcnt_est = (owner_four_vehicle + renter_no_vehicle) / total_nr_hh,
+        hhOwns5orMoreVehicle_prcnt_est = (owner_fiveOrMore_vehicle + renter_fiveOrMore_vehicle) / total_nr_hh
     ) |>
     select(matches("^year$|full_fips|^state$|^county$|prcnt_est"))
 
 df_housing_problems <-
     acs_df |>
     mutate(
-        hhNoPhone_prcnt_est =
-            if_else(total_nr_hh != 0, (total_nr_owner_occupied_units_no_telphone + total_nr_renter_occupied_units_no_telephone) / total_nr_hh, 0),
-        hhKitchenProblems_prcnt_est = if_else(total_nr_hh != 0, lacks_kitchen / total_nr_hh, 0),
-        hhBathroomProblems_prcnt_est = if_else(total_nr_hh != 0, lacks_plumbing / total_nr_hh, 0),
-        hhLessThan5PeronPerRoom_prcnt_est =
-            if_else(total_nr_hh != 0, (owner_nr_people_per_room_below5 + renter_nr_people_per_room_below5) / total_nr_hh, 0),
-        hhBetweeen51and100PersonPerRoom_prcnt_est =
-            if_else(total_nr_hh != 0, (owner_nr_people_per_room_51to100 + renter_nr_people_per_room_51to100) / total_nr_hh, 0),
-        hhBetweeen101and150PersonPerRoom_prcnt_est =
-            if_else(total_nr_hh != 0, (owner_nr_people_per_room_101to150 + renter_nr_people_per_room_101to150) / total_nr_hh, 0),
-        hhBetweeen151and200PersonPerRoom_prcnt_est =
-            if_else(total_nr_hh != 0, (owner_nr_people_per_room_151to2 + renter_nr_people_per_room_151to2) / total_nr_hh, 0),
-        hhAbove200PersonPerRoom_prcnt_est =
-            if_else(total_nr_hh != 0, (owner_nr_people_per_room_above2 + renter_nr_people_per_room_above2) / total_nr_hh, 0),
-        hhWith0Problem_prcnt_est =
-            if_else(total_nr_hh != 0, (owner_occupied_no_problems + renter_occupied_no_problems) / total_nr_hh, 0),
-        hhWith1Problem_prcnt_est =
-            if_else(total_nr_hh != 0, (owner_occupied_one_problem + renter_occupied_one_problem) / total_nr_hh, 0),
-        hhWith2Problem_prcnt_est =
-            if_else(total_nr_hh != 0, (owner_occupied_two_problems + renter_occupied_two_problems) / total_nr_hh, 0),
-        hhWith3Problem_prcnt_est =
-            if_else(total_nr_hh != 0, (owner_occupied_three_problems + renter_occupied_three_problems) / total_nr_hh, 0),
-        hhWith4Problem_prcnt_est =
-            if_else(total_nr_hh != 0, (owner_occupied_all_problems + renter_occupied_all_problems) / total_nr_hh, 0)
+        hhNoPhone_prcnt_est = (total_nr_owner_occupied_units_no_telphone + total_nr_renter_occupied_units_no_telephone) / total_nr_hh,
+        hhKitchenProblems_prcnt_est = lacks_kitchen / total_nr_hh,
+        hhBathroomProblems_prcnt_est = lacks_plumbing / total_nr_hh,
+        hhLessThan5PersonPerRoom_prcnt_est = (owner_nr_people_per_room_below5 + renter_nr_people_per_room_below5) / total_nr_hh,
+        hhBetweeen51and100PersonPerRoom_prcnt_est = (owner_nr_people_per_room_51to100 + renter_nr_people_per_room_51to100) / total_nr_hh,
+        hhBetweeen101and150PersonPerRoom_prcnt_est = (owner_nr_people_per_room_101to150 + renter_nr_people_per_room_101to150) / total_nr_hh,
+        hhBetweeen151and200PersonPerRoom_prcnt_est = (owner_nr_people_per_room_151to2 + renter_nr_people_per_room_151to2) / total_nr_hh,
+        hhAbove200PersonPerRoom_prcnt_est = (owner_nr_people_per_room_above2 + renter_nr_people_per_room_above2) / total_nr_hh,
+        hhWith0Problem_prcnt_est = (owner_occupied_no_problems + renter_occupied_no_problems) / total_nr_hh,
+        hhWith1Problem_prcnt_est = (owner_occupied_one_problem + renter_occupied_one_problem) / total_nr_hh,
+        hhWith2Problem_prcnt_est = (owner_occupied_two_problems + renter_occupied_two_problems) / total_nr_hh,
+        hhWith3Problem_prcnt_est = (owner_occupied_three_problems + renter_occupied_three_problems) / total_nr_hh,
+        hhWith4Problem_prcnt_est = (owner_occupied_all_problems + renter_occupied_all_problems) / total_nr_hh
     ) |>
     select(matches("^year$|full_fips|^state$|^county$|prcnt_est"))
 
@@ -323,70 +278,37 @@ df_housing_values <-
     acs_df |>
     mutate(
         hhLessThan50Value_prcnt_est =
-            if_else(
-                total_nr_owner_occupied_units != 0,
-                (
-                    house_value_owner_occupied_below10 + house_value_owner_occupied_10to15 +
-                        house_value_owner_occupied_15to20 + house_value_owner_occupied_20to25 +
-                        house_value_owner_occupied_25to30 + house_value_owner_occupied_30to35 +
-                        house_value_owner_occupied_35to40 + house_value_owner_occupied_40to50
-                ) /
-                    total_nr_owner_occupied_units,
-                0
-            ),
+            (
+                house_value_owner_occupied_below10 + house_value_owner_occupied_10to15 +
+                    house_value_owner_occupied_15to20 + house_value_owner_occupied_20to25 +
+                    house_value_owner_occupied_25to30 + house_value_owner_occupied_30to35 +
+                    house_value_owner_occupied_35to40 + house_value_owner_occupied_40to50
+            ) /
+            total_nr_owner_occupied_units,
         hhBetween50And100Value_prcnt_est =
-            if_else(
-                total_nr_owner_occupied_units != 0,
-                (
-                    house_value_owner_occupied_50to60 + house_value_owner_occupied_60to70 +
-                        house_value_owner_occupied_70to80 + house_value_owner_occupied_80to90 +
-                        house_value_owner_occupied_90to100
-                ) / 
-                    total_nr_owner_occupied_units,
-                0
-            ),
+            (
+                house_value_owner_occupied_50to60 + house_value_owner_occupied_60to70 +
+                    house_value_owner_occupied_70to80 + house_value_owner_occupied_80to90 +
+                    house_value_owner_occupied_90to100
+            ) /
+            total_nr_owner_occupied_units,
         hhBetween100And150Value_prcnt_est =
-            if_else(
-                total_nr_owner_occupied_units != 0,
-                (house_value_owner_occupied_100to125 + house_value_owner_occupied_125to150) / total_nr_owner_occupied_units,
-                0
-            ),
+            (house_value_owner_occupied_100to125 + house_value_owner_occupied_125to150) / total_nr_owner_occupied_units,
         hhBetween150And200Value_prcnt_est =
-            if_else(
-                total_nr_owner_occupied_units != 0,
                 (house_value_owner_occupied_150to175 + house_value_owner_occupied_175to200) / total_nr_owner_occupied_units,
-                0
-            ),
         hhBetween200And300Value_prcnt_est =
-            if_else(
-                total_nr_owner_occupied_units != 0,
                 (house_value_owner_occupied_200to250 + house_value_owner_occupied_250to300) / total_nr_owner_occupied_units,
-                0
-            ),
         hhBetween300And500Value_prcnt_est =
-            if_else(
-                total_nr_owner_occupied_units != 0,
                 (house_value_owner_occupied_300to400 + house_value_owner_occupied_400to500) / total_nr_owner_occupied_units,
-                0
-            ),
         hhBetween500And1000Value_prcnt_est =
-            if_else(
-                total_nr_owner_occupied_units != 0,
                 (house_value_owner_occupied_500to750 + house_value_owner_occupied_750to1000) / total_nr_owner_occupied_units,
-                0
-            ),
         hhAbove1000Value_nr_est =
             if_else(
                 year < 2015,
                 house_value_owner_occupied_above1000,
                 house_value_owner_occupied_1000to1500 + house_value_owner_occupied_1500to2000 + house_value_owner_occupied_above2000
             ),
-        hhAbove1000Value_prcnt_est =
-            if_else(
-                total_nr_owner_occupied_units != 0,
-                hhAbove1000Value_nr_est  / total_nr_owner_occupied_units,
-                0
-            ),
+        hhAbove1000Value_prcnt_est = hhAbove1000Value_nr_est  / total_nr_owner_occupied_units,
         homeValue_25thPtile_est = if_else(house_value_owner_occupied_25thPtile >= 0, house_value_owner_occupied_25thPtile, NA),
         homeValue_median_est = if_else(house_value_owner_occupied_median >= 0, house_value_owner_occupied_median, NA),
         homeValue_75thPtile_est = if_else(house_value_owner_occupied_75thPtile >= 0, house_value_owner_occupied_75thPtile, NA)
@@ -398,41 +320,28 @@ df_housing_values <-
 df_occupants_per_room_by_race <-
     acs_df |>
     mutate(
-        hhOccupantsPerRoomAbove101_prcnt_est_allAges_b =
-            if_else(total_nr_black_hh != 0, nr_people_per_room_above101_black / total_nr_black_hh, 0),
-        hhOccupantsPerRoomAbove101_prcnt_est_allAges_w =
-            if_else(total_nr_white_hh != 0, nr_people_per_room_above101_white / total_nr_white_hh, 0),
-        hhOccupantsPerRoomAbove101_prcnt_est_allAges_h =
-            if_else(total_nr_hisp_hh != 0, nr_people_per_room_above101_hisp / total_nr_hisp_hh, 0),
-        ratioBlackWhiteOvercrowding_ratio_est =
-            if_else(
-                hhOccupantsPerRoomAbove101_prcnt_est_allAges_w != 0,
-                hhOccupantsPerRoomAbove101_prcnt_est_allAges_b / hhOccupantsPerRoomAbove101_prcnt_est_allAges_w,
-                0
-            ),
-        ratioHispWhiteOvercrowding_ratio_est =
-            if_else(
-                hhOccupantsPerRoomAbove101_prcnt_est_allAges_w != 0,
-                hhOccupantsPerRoomAbove101_prcnt_est_allAges_h / hhOccupantsPerRoomAbove101_prcnt_est_allAges_w,
-                0
-            )
+        hhOccupantsPerRoomAbove101_prcnt_est_allAges_b = nr_people_per_room_above101_black / total_nr_black_hh,
+        hhOccupantsPerRoomAbove101_prcnt_est_allAges_w = nr_people_per_room_above101_white / total_nr_white_hh,
+        hhOccupantsPerRoomAbove101_prcnt_est_allAges_h = nr_people_per_room_above101_hisp / total_nr_hisp_hh,
+        ratioBlackWhiteOvercrowding_diff_est =
+                hhOccupantsPerRoomAbove101_prcnt_est_allAges_b - hhOccupantsPerRoomAbove101_prcnt_est_allAges_w,
+        ratioHispWhiteOvercrowding_diff_est =
+                hhOccupantsPerRoomAbove101_prcnt_est_allAges_h - hhOccupantsPerRoomAbove101_prcnt_est_allAges_w
     ) |>
-    select(matches("^year$|full_fips|^state$|^county$|prcnt_est|ratio"))
+    select(matches("^year$|full_fips|^state$|^county$|diff_est"))
 
 ################################################################################
 # Rental data by race.
 df_renters_by_race <-
     acs_df |>
     mutate(
-        renters_prcnt_est_allAges_b = if_else(total_nr_black_hh != 0, nr_renter_black / total_nr_black_hh, 0),
-        renters_prcnt_est_allAges_w = if_else(total_nr_white_hh != 0, nr_renter_white / total_nr_white_hh, 0),
-        renters_prcnt_est_allAges_h = if_else(total_nr_hisp_hh != 0, nr_renter_hisp / total_nr_hisp_hh, 0),
-        blackToWhiteRenters_ratio_est =
-            if_else(renters_prcnt_est_allAges_w != 0, renters_prcnt_est_allAges_b / renters_prcnt_est_allAges_w, 0),
-        hispToWhiteRenters_ratio_est =
-            if_else(renters_prcnt_est_allAges_w != 0, renters_prcnt_est_allAges_h / renters_prcnt_est_allAges_w, 0)
+        renters_prcnt_est_allAges_b = nr_renter_black / total_nr_black_hh,
+        renters_prcnt_est_allAges_w = nr_renter_white / total_nr_white_hh,
+        renters_prcnt_est_allAges_h = nr_renter_hisp / total_nr_hisp_hh,
+        blackToWhiteRenters_diff_est = renters_prcnt_est_allAges_b - renters_prcnt_est_allAges_w,
+        hispToWhiteRenters_diff_est = renters_prcnt_est_allAges_h - renters_prcnt_est_allAges_w
     ) |>
-    select(matches("^year$|full_fips|^state$|^county$|prcnt_est|ratio"))
+    select(matches("^year$|full_fips|^state$|^county$|diff_est"))
 
 ################################################################################
 # Presence of own children.
@@ -441,80 +350,48 @@ df_paoc <-
     mutate(
         singleMom_prcnt_est = femaleHHAlone_related_children / total_nr_hh,
         singleDad_prcnt_est = maleHHAlone_related_children / total_nr_hh,
-        singleParent_prcnt_est =
-            (femaleHHAlone_related_children + maleHHAlone_related_children) / total_nr_hh
+        singleParent_prcnt_est = (femaleHHAlone_related_children + maleHHAlone_related_children) / total_nr_hh
     ) |>
-    select(matches("^year$|full_fips|^state$|^county$|prcnt_est|ratio"))
+    select(matches("^year$|full_fips|^state$|^county$|prcnt_est"))
 
 ################################################################################
 # Presence of own children by race.
 df_paoc_race <-
     acs_df |>
     mutate(
-        singleMom_prcnt_est_allAges_b = 
-            if_else(
-                total_nr_black_hh != 0,
-                (femaleHHAlone_related_children_black_in_poverty + femaleHHAlone_related_children_black_above_poverty) / total_nr_black_hh,
-                0
-            ),
+        singleMom_prcnt_est_allAges_b =
+            (femaleHHAlone_related_children_black_in_poverty + femaleHHAlone_related_children_black_above_poverty) / total_nr_black_hh,
         singleParent_prcnt_est_allAges_b = 
-            if_else(
-                total_nr_black_hh != 0,
-                (
-                    femaleHHAlone_related_children_black_in_poverty +
-                        femaleHHAlone_related_children_black_above_poverty +
-                        maleHHAlone_related_children_black_in_poverty +
-                        maleHHAlone_related_children_black_above_poverty
-                ) /
-                    total_nr_black_hh,
-                0
-            ),
-        singleMom_prcnt_est_allAges_w = 
-            if_else(
-                total_nr_white_hh != 0,
-                (femaleHHAlone_related_children_white_in_poverty + femaleHHAlone_related_children_white_above_poverty) / total_nr_white_hh,
-                0
-            ),
-        singleParent_prcnt_est_allAges_w = 
-            if_else(
-                total_nr_white_hh != 0,
-                (
-                    femaleHHAlone_related_children_white_in_poverty +
-                        femaleHHAlone_related_children_white_above_poverty +
-                        maleHHAlone_related_children_white_in_poverty +
-                        maleHHAlone_related_children_white_above_poverty
-                ) /
-                    total_nr_white_hh,
-                0
-            ),
+            (
+                femaleHHAlone_related_children_black_in_poverty +
+                    femaleHHAlone_related_children_black_above_poverty +
+                    maleHHAlone_related_children_black_in_poverty +
+                    maleHHAlone_related_children_black_above_poverty
+            ) / total_nr_black_hh,
+        singleMom_prcnt_est_allAges_w =
+            (femaleHHAlone_related_children_white_in_poverty + femaleHHAlone_related_children_white_above_poverty) / total_nr_white_hh,
+        singleParent_prcnt_est_allAges_w =
+            (
+                femaleHHAlone_related_children_white_in_poverty +
+                    femaleHHAlone_related_children_white_above_poverty +
+                    maleHHAlone_related_children_white_in_poverty +
+                    maleHHAlone_related_children_white_above_poverty
+            ) / total_nr_white_hh,
         singleMom_prcnt_est_allAges_h = 
-            if_else(
-                total_nr_hisp_hh != 0,
                 (femaleHHAlone_related_children_hisp_in_poverty + femaleHHAlone_related_children_hisp_above_poverty) / total_nr_hisp_hh,
-                0
-            ),
-        singleParent_prcnt_est_allAges_h = 
-            if_else(
-                total_nr_hisp_hh != 0,
-                (
-                    femaleHHAlone_related_children_hisp_in_poverty +
-                        femaleHHAlone_related_children_hisp_above_poverty +
-                        maleHHAlone_related_children_hisp_in_poverty +
-                        maleHHAlone_related_children_hisp_above_poverty
-                ) /
-                    total_nr_hisp_hh,
-                0
-            ),
-        blackToWhiteSingleMom_ratio_est =
-            if_else(singleMom_prcnt_est_allAges_w != 0, singleMom_prcnt_est_allAges_b / singleMom_prcnt_est_allAges_w, 0),
-        hispToWhiteSingleMom_ratio_est =
-            if_else(singleMom_prcnt_est_allAges_w != 0, singleMom_prcnt_est_allAges_h / singleMom_prcnt_est_allAges_w, 0),
-        blackToWhiteSingleParent_ratio_est =
-            if_else(singleParent_prcnt_est_allAges_w != 0, singleParent_prcnt_est_allAges_b / singleParent_prcnt_est_allAges_w, 0),
-        hispToWhiteSingleParent_ratio_est =
-            if_else(singleParent_prcnt_est_allAges_w != 0, singleParent_prcnt_est_allAges_h / singleParent_prcnt_est_allAges_w, 0)
+        singleParent_prcnt_est_allAges_h =
+            (
+                femaleHHAlone_related_children_hisp_in_poverty +
+                    femaleHHAlone_related_children_hisp_above_poverty +
+                    maleHHAlone_related_children_hisp_in_poverty +
+                    maleHHAlone_related_children_hisp_above_poverty
+                ) / total_nr_hisp_hh,
+        blackToWhiteSingleMom_diff_est = singleMom_prcnt_est_allAges_b - singleMom_prcnt_est_allAges_w,
+        hispToWhiteSingleMom_diff_est = singleMom_prcnt_est_allAges_h - singleMom_prcnt_est_allAges_w,
+        blackToWhiteSingleParent_diff_est = singleParent_prcnt_est_allAges_b - singleParent_prcnt_est_allAges_w,
+        hispToWhiteSingleParent_diff_est = singleParent_prcnt_est_allAges_h - singleParent_prcnt_est_allAges_w
     ) |>
-    select(matches("^year$|full_fips|^state$|^county$|prcnt_est|ratio"))
+    select(matches("^year$|full_fips|^state$|^county$|diff_est"))
 
 ################################################################################
 # Residential mobility.
@@ -524,145 +401,65 @@ df_mobility <-
         ###################################### All races.
         nr_moved_past_year = (total_nr_moved_same_county + total_nr_moved_same_state + total_nr_moved_same_country + total_nr_moved_diff_country),
         yearMoved_median_est = if_else(median_year_moved_into_unit >= 0, year - median_year_moved_into_unit, NA),
-        movedPastYear_prcnt_est_1AndOlder = if_else(total_population != 0, nr_moved_past_year / total_population, 0),
-        movedWithinCounty_prcnt_est_1AndOlder = if_else(nr_moved_past_year != 0, total_nr_moved_same_county / nr_moved_past_year, 0),
-        movedWithinState_prcnt_est_1AndOlder = if_else(nr_moved_past_year != 0, total_nr_moved_same_state / nr_moved_past_year, 0),
-        movedDiff_prcnt_est_1AndOlder =
-            if_else(nr_moved_past_year != 0, (total_nr_moved_same_country + total_nr_moved_diff_country) / nr_moved_past_year, 0),
+        movedPastYear_prcnt_est_1AndOlder = nr_moved_past_year / total_population,
+        movedWithinCounty_prcnt_est_1AndOlder = total_nr_moved_same_county / nr_moved_past_year,
+        movedWithinState_prcnt_est_1AndOlder = total_nr_moved_same_state / nr_moved_past_year,
+        movedDiff_prcnt_est_1AndOlder = (total_nr_moved_same_country + total_nr_moved_diff_country) / nr_moved_past_year,
         ######################################### Black individuals.
         nr_moved_past_year_black =
             total_nr_moved_same_county_black + total_nr_moved_same_state_black +
             total_nr_moved_same_country_black + total_nr_moved_diff_country_black,
-        movedPastYear_prcnt_est_1AndOlder_b = if_else(total_black_pop != 0, nr_moved_past_year_black / total_black_pop, 0),
-        movedWithinCounty_prcnt_est_1AndOlder_b =
-            if_else(nr_moved_past_year_black != 0, total_nr_moved_same_county_black / nr_moved_past_year_black, 0),
-        movedWithinState_prcnt_est_1AndOlder_b =
-            if_else(nr_moved_past_year_black != 0, total_nr_moved_same_state_black / nr_moved_past_year_black, 0),
-        movedDiff_prcnt_est_1AndOlder_b =
-            if_else(
-                nr_moved_past_year_black != 0,
-                (total_nr_moved_same_country_black + total_nr_moved_diff_country_black) / nr_moved_past_year_black,
-                0
-            ),
+        movedPastYear_prcnt_est_1AndOlder_b = nr_moved_past_year_black / total_black_pop,
+        movedWithinCounty_prcnt_est_1AndOlder_b = total_nr_moved_same_county_black / nr_moved_past_year_black,
+        movedWithinState_prcnt_est_1AndOlder_b = total_nr_moved_same_state_black / nr_moved_past_year_black,
+        movedDiff_prcnt_est_1AndOlder_b = (total_nr_moved_same_country_black + total_nr_moved_diff_country_black) / nr_moved_past_year_black,
         ######################################### White individuals.
         nr_moved_past_year_white =
             total_nr_moved_same_county_white + total_nr_moved_same_state_white +
             total_nr_moved_same_country_white + total_nr_moved_diff_country_white,
-        movedPastYear_prcnt_est_1AndOlder_w =
-            if_else(total_white_pop != 0, nr_moved_past_year_white / total_white_pop, 0),
-        movedWithinCounty_prcnt_est_1AndOlder_w =
-            if_else(nr_moved_past_year_white != 0, total_nr_moved_same_county_white / nr_moved_past_year_white, 0),
-        movedWithinState_prcnt_est_1AndOlder_w =
-            if_else(nr_moved_past_year_white != 0, total_nr_moved_same_state_white / nr_moved_past_year_white, 0),
-        movedDiff_prcnt_est_1AndOlder_w =
-            if_else(
-                nr_moved_past_year_white != 0,
-                (total_nr_moved_same_country_white + total_nr_moved_diff_country_white) / nr_moved_past_year_white,
-                0
-            ),
+        movedPastYear_prcnt_est_1AndOlder_w = nr_moved_past_year_white / total_white_pop,
+        movedWithinCounty_prcnt_est_1AndOlder_w = total_nr_moved_same_county_white / nr_moved_past_year_white,
+        movedWithinState_prcnt_est_1AndOlder_w = total_nr_moved_same_state_white / nr_moved_past_year_white,
+        movedDiff_prcnt_est_1AndOlder_w = (total_nr_moved_same_country_white + total_nr_moved_diff_country_white) / nr_moved_past_year_white,
         ######################################### Hispanic individuals.
         nr_moved_past_year_hisp =
             total_nr_moved_same_county_hisp + total_nr_moved_same_state_hisp +
             total_nr_moved_same_country_hisp + total_nr_moved_diff_country_hisp,
-        movedPastYear_prcnt_est_1AndOlder_h =
-            if_else(total_hisp_pop != 0, nr_moved_past_year_hisp / total_hisp_pop, 0),
-        movedWithinCounty_prcnt_est_1AndOlder_h =
-            if_else(nr_moved_past_year_hisp != 0, total_nr_moved_same_county_hisp / nr_moved_past_year_hisp, 0),
-        movedWithinState_prcnt_est_1AndOlder_h =
-            if_else(nr_moved_past_year_hisp != 0, total_nr_moved_same_state_hisp / nr_moved_past_year_hisp, 0),
-        movedDiff_prcnt_est_1AndOlder_h =
-            if_else(
-                nr_moved_past_year_hisp != 0,
-                (total_nr_moved_same_country_hisp + total_nr_moved_diff_country_hisp) / nr_moved_past_year_hisp,
-                0
-            ),
-        ######################################### Black to white ratios.
-        blackToWhiteMovers_ratio_est =
-            if_else(
-                movedPastYear_prcnt_est_1AndOlder_w != 0,
-                movedPastYear_prcnt_est_1AndOlder_b / movedPastYear_prcnt_est_1AndOlder_w,
-                0
-            ),
-        blackToWhiteMoversWithinCounty_ratio_est =
-            if_else(
-                movedWithinCounty_prcnt_est_1AndOlder_w != 0,
-                movedWithinCounty_prcnt_est_1AndOlder_b / movedWithinCounty_prcnt_est_1AndOlder_w,
-                0
-            ),
-        blackToWhiteMoversWithinState_ratio_est =
-            if_else(
-                movedWithinState_prcnt_est_1AndOlder_w != 0,
-                movedWithinState_prcnt_est_1AndOlder_b / movedWithinState_prcnt_est_1AndOlder_w,
-                0
-            ),
-        blackToWhiteMoversDiff_ratio_est =
-            if_else(
-                movedDiff_prcnt_est_1AndOlder_w != 0,
-                movedDiff_prcnt_est_1AndOlder_b / movedDiff_prcnt_est_1AndOlder_w,
-                0
-            ),
-        ######################################### Hispanic to white ratios.
-        hispToWhiteMovers_ratio_est =
-            if_else(
-                movedPastYear_prcnt_est_1AndOlder_w != 0,
-                movedPastYear_prcnt_est_1AndOlder_h / movedPastYear_prcnt_est_1AndOlder_w,
-                0
-            ),
-        hispToWhiteMoversWithinCounty_ratio_est =
-            if_else(
-                movedWithinCounty_prcnt_est_1AndOlder_w != 0,
-                movedWithinCounty_prcnt_est_1AndOlder_h / movedWithinCounty_prcnt_est_1AndOlder_w,
-                0
-            ),
-        hispToWhiteMoversWithinState_ratio_est =
-            if_else(
-                movedWithinState_prcnt_est_1AndOlder_w != 0,
-                movedWithinState_prcnt_est_1AndOlder_h / movedWithinState_prcnt_est_1AndOlder_w,
-                0
-            ),
-        hispToWhiteMoversDiff_ratio_est =
-            if_else(
-                movedDiff_prcnt_est_1AndOlder_w != 0,
-                movedDiff_prcnt_est_1AndOlder_h / movedDiff_prcnt_est_1AndOlder_w,
-                0
-            )
+        movedPastYear_prcnt_est_1AndOlder_h = nr_moved_past_year_hisp / total_hisp_pop,
+        movedWithinCounty_prcnt_est_1AndOlder_h = total_nr_moved_same_county_hisp / nr_moved_past_year_hisp,
+        movedWithinState_prcnt_est_1AndOlder_h = total_nr_moved_same_state_hisp / nr_moved_past_year_hisp,
+        movedDiff_prcnt_est_1AndOlder_h = (total_nr_moved_same_country_hisp + total_nr_moved_diff_country_hisp) / nr_moved_past_year_hisp,
+        ######################################### Black to white risk differences.
+        blackToWhiteMovers_diff_est = movedPastYear_prcnt_est_1AndOlder_b - movedPastYear_prcnt_est_1AndOlder_w,
+        blackToWhiteMoversWithinCounty_diff_est = movedWithinCounty_prcnt_est_1AndOlder_b - movedWithinCounty_prcnt_est_1AndOlder_w,
+        blackToWhiteMoversWithinState_diff_est = movedWithinState_prcnt_est_1AndOlder_b - movedWithinState_prcnt_est_1AndOlder_w,
+        blackToWhiteMoversDiff_diff_est = movedDiff_prcnt_est_1AndOlder_b - movedDiff_prcnt_est_1AndOlder_w,
+        ######################################### Hispanic to white risk differences.
+        hispToWhiteMovers_diff_est = movedPastYear_prcnt_est_1AndOlder_h - movedPastYear_prcnt_est_1AndOlder_w,
+        hispToWhiteMoversWithinCounty_diff_est = movedWithinCounty_prcnt_est_1AndOlder_h - movedWithinCounty_prcnt_est_1AndOlder_w,
+        hispToWhiteMoversWithinState_diff_est = movedWithinState_prcnt_est_1AndOlder_h - movedWithinState_prcnt_est_1AndOlder_w,
+        hispToWhiteMoversDiff_diff_est = movedDiff_prcnt_est_1AndOlder_h - movedDiff_prcnt_est_1AndOlder_w
     ) |>
-    select(matches("^year$|full_fips|^state$|^county$|prcnt_est|ratio|yearMoved_median"))
+    select(matches("^year$|full_fips|^state$|^county$|movedPastYear_prcnt_est_1AndOlder$|Movers_diff|yearMoved_median"))
 
 ################################################################################
 # Child variables.
 df_child <-
     acs_df |>
     mutate(
-        receiveCpaSnapSSI_prcnt_est_ages17AndYounger =
-            if_else(total_nr_children_in_hh != 0, children_in_hh_with_publicAsstOrSnapOrSSI / total_nr_children_in_hh, 0),
+        receiveCpaSnapSSI_prcnt_est_ages17AndYounger = children_in_hh_with_publicAsstOrSnapOrSSI / total_nr_children_in_hh,
         notInSchoolOrLf_prcnt_est_ages16to19 =
-            if_else(
-                total_pop_16_to_19 != 0,
-                (
-                    not_in_school_or_labor_force_HSGrad_male +
-                        not_in_school_or_labor_force_notHSGrad_male +
-                        not_in_school_or_labor_force_HSGrad_female +
-                        not_in_school_or_labor_force_notHSGrad_female
-                ) /
-                  total_pop_16_to_19,
-                0
-            ),
+            (
+                not_in_school_or_labor_force_HSGrad_male +
+                    not_in_school_or_labor_force_notHSGrad_male +
+                    not_in_school_or_labor_force_HSGrad_female +
+                    not_in_school_or_labor_force_notHSGrad_female
+            ) / total_pop_16_to_19,
         liveInSingleParentHh_prcnt_est_ages17AndYounger =
-            if_else(
-                total_nr_children_in_hh_exclude_marriage != 0,
                 (total_nr_children_in_maleAloneHH + total_nr_children_in_femaleAloneHH) / total_nr_children_in_hh_exclude_marriage,
-                0
-            ),
         doNotLiveWithParent_prcnt_est_ages17AndYounger =
-            if_else(
-                total_nr_children_in_hh_exclude_marriage != 0,
-                (
-                    total_nr_children_in_grandparentHH + total_nr_children_in_otherRelativesHH + total_nr_children_in_fosterHH
-                ) /
-                    total_nr_children_in_hh_exclude_marriage,
-                0
-            ),
+            (total_nr_children_in_grandparentHH + total_nr_children_in_otherRelativesHH + total_nr_children_in_fosterHH) /
+            total_nr_children_in_hh_exclude_marriage,
         nr_not_in_poverty_black =
             if_else(
                 year > 2012,
@@ -675,8 +472,7 @@ df_child <-
                 black_poverty_under6 + black_poverty_6to11 + black_poverty_12to17,
                 black_poverty_under5 + black_poverty_age5 + black_poverty_6to11 + black_poverty_12to17
             ),
-        inPoverty_prcnt_est_ages17AndYounger_b =
-            if_else(nr_not_in_poverty_black != 0, nr_in_poverty_black / (nr_in_poverty_black + nr_not_in_poverty_black), 0),
+        inPoverty_prcnt_est_ages17AndYounger_b = nr_in_poverty_black / (nr_in_poverty_black + nr_not_in_poverty_black),
         nr_not_in_poverty_white =
             if_else(
                 year > 2012,
@@ -689,8 +485,7 @@ df_child <-
                 white_poverty_under6 + white_poverty_6to11 + white_poverty_12to17,
                 white_poverty_under5 + white_poverty_age5 + white_poverty_6to11 + white_poverty_12to17
             ),
-        inPoverty_prcnt_est_ages17AndYounger_w =
-            if_else(nr_not_in_poverty_white != 0, nr_in_poverty_white / (nr_in_poverty_white + nr_not_in_poverty_white), 0),
+        inPoverty_prcnt_est_ages17AndYounger_w = nr_in_poverty_white / (nr_in_poverty_white + nr_not_in_poverty_white),
         nr_not_in_poverty_hisp =
             if_else(
                 year > 2012,
@@ -703,74 +498,35 @@ df_child <-
                 hisp_poverty_under6 + hisp_poverty_6to11 + hisp_poverty_12to17,
                 hisp_poverty_under5 + hisp_poverty_age5 + hisp_poverty_6to11 + hisp_poverty_12to17
             ),
-        inPoverty_prcnt_est_ages17AndYounger_h =
-            if_else(nr_not_in_poverty_hisp != 0, nr_in_poverty_hisp / (nr_in_poverty_hisp + nr_not_in_poverty_hisp), 0),
-        blackToWhiteChildPoverty_ratio_est =
-            if_else(
-                inPoverty_prcnt_est_ages17AndYounger_w != 0,
-                inPoverty_prcnt_est_ages17AndYounger_b / inPoverty_prcnt_est_ages17AndYounger_w,
-                0
-            ),
-        hispToWhiteChildPoverty_ratio_est =
-            if_else(
-                inPoverty_prcnt_est_ages17AndYounger_w != 0,
-                inPoverty_prcnt_est_ages17AndYounger_h / inPoverty_prcnt_est_ages17AndYounger_w,
-                0
-            )
+        inPoverty_prcnt_est_ages17AndYounger_h = nr_in_poverty_hisp / (nr_in_poverty_hisp + nr_not_in_poverty_hisp),
+        blackToWhiteChildPoverty_diff_est = inPoverty_prcnt_est_ages17AndYounger_b - inPoverty_prcnt_est_ages17AndYounger_w,
+        hispToWhiteChildPoverty_diff_est = inPoverty_prcnt_est_ages17AndYounger_h - inPoverty_prcnt_est_ages17AndYounger_w
     ) |>
-    select(matches("^year$|full_fips|^state$|^county$|prcnt_est|ratio*"))
+    select(matches("^year$|full_fips|^state$|^county$|receiveCpa|notInSchool|liveInSingle|doNotLive|diff_est"))
 
 ################################################################################
 # Marriage by race.
 df_marriage_by_race <-
     acs_df |>
     mutate(
-        married_prcnt_est_15AndOlder_b =
-            if_else(total_pop_age15_black != 0, (black_male_married + black_female_married) / total_pop_age15_black, 0),
-        married_prcnt_est_15AndOlder_w =
-            if_else(total_pop_age15_white != 0, (white_male_married + white_female_married) / total_pop_age15_white, 0),
-        married_prcnt_est_15AndOlder_h =
-            if_else(total_pop_age15_hisp != 0, (hisp_male_married + hisp_female_married) / total_pop_age15_hisp, 0),
+        married_prcnt_est_15AndOlder_b = (black_male_married + black_female_married) / total_pop_age15_black,
+        married_prcnt_est_15AndOlder_w = (white_male_married + white_female_married) / total_pop_age15_white,
+        married_prcnt_est_15AndOlder_h = (hisp_male_married + hisp_female_married) / total_pop_age15_hisp,
         everMarried_prcnt_est_15AndOlder_b =
-            if_else(
-                total_pop_age15_black != 0,
-                (
-                    black_male_separated + black_male_widowed + black_male_divorced +
-                        black_female_separated + black_female_widowed + black_female_divorced
-                ) /
-                    total_pop_age15_black,
-                0
-            ),
+            (black_male_separated + black_male_widowed + black_male_divorced + black_female_separated + black_female_widowed + black_female_divorced) /
+            total_pop_age15_black,
         everMarried_prcnt_est_15AndOlder_w =
-            if_else(
-                total_pop_age15_white != 0,
-                (
-                    white_male_separated + white_male_widowed + white_male_divorced +
-                        white_female_separated + white_female_widowed + white_female_divorced
-                ) /
-                    total_pop_age15_white,
-                0
-            ),
+            (white_male_separated + white_male_widowed + white_male_divorced + white_female_separated + white_female_widowed + white_female_divorced) /
+            total_pop_age15_white,
         everMarried_prcnt_est_15AndOlder_h =
-            if_else(
-                total_pop_age15_hisp != 0,
-                (
-                    hisp_male_separated + hisp_male_widowed + hisp_male_divorced +
-                        hisp_female_separated + hisp_female_widowed + hisp_female_divorced
-                ) /
-                    total_pop_age15_hisp,
-                0
-            ),
-        blackToWhiteMarried_ratio_est =
-            if_else(married_prcnt_est_15AndOlder_w != 0, married_prcnt_est_15AndOlder_b / married_prcnt_est_15AndOlder_w, 0),
-        blackToWhiteEverMarried_ratio_est =
-            if_else(everMarried_prcnt_est_15AndOlder_w != 0, everMarried_prcnt_est_15AndOlder_b / everMarried_prcnt_est_15AndOlder_w, 0),
-        hispToWhiteMarried_ratio_est =
-            if_else(married_prcnt_est_15AndOlder_w != 0, married_prcnt_est_15AndOlder_h / married_prcnt_est_15AndOlder_w, 0),
-        hispToWhiteEverMarried_ratio_est =
-            if_else(everMarried_prcnt_est_15AndOlder_w != 0, everMarried_prcnt_est_15AndOlder_h / everMarried_prcnt_est_15AndOlder_w, 0)
+            (hisp_male_separated + hisp_male_widowed + hisp_male_divorced + hisp_female_separated + hisp_female_widowed + hisp_female_divorced) /
+            total_pop_age15_hisp,
+        blackToWhiteMarried_diff_est = married_prcnt_est_15AndOlder_b - married_prcnt_est_15AndOlder_w,
+        blackToWhiteEverMarried_diff_est = everMarried_prcnt_est_15AndOlder_b - everMarried_prcnt_est_15AndOlder_w,
+        hispToWhiteMarried_diff_est = married_prcnt_est_15AndOlder_h - married_prcnt_est_15AndOlder_w,
+        hispToWhiteEverMarried_diff_est = everMarried_prcnt_est_15AndOlder_h - everMarried_prcnt_est_15AndOlder_w
     ) |>
-    select(matches("^year$|full_fips|^state$|^county$|prcnt_est|ratio"))
+    select(matches("^year$|full_fips|^state$|^county$|diff_est"))
 
 ################################################################################
 # Fertility
@@ -778,43 +534,23 @@ df_fertility <-
     acs_df |>
     mutate(
         nrBirthsPer10000Unmarried_rate_est_ages15to50_allRaces_f =
-            if_else(
-                nr_unmarriedWomen_didNotBirth_ages15to50 != 0,
-                nr_unmarriedWomen_gaveBirth_ages15to50 * 10000 / nr_unmarriedWomen_didNotBirth_ages15to50,
-                0
-            ),
+            nr_unmarriedWomen_gaveBirth_ages15to50 * 10000 /
+            (nr_unmarriedWomen_gaveBirth_ages15to50 + nr_unmarriedWomen_didNotBirth_ages15to50),
         nrBirthsPer10000Unmarried_rate_est_ages15to50_b_f =
-            if_else(
-                nr_unmarriedWomen_didNotBirth_ages15to50_black != 0,
-                nr_unmarriedWomen_gaveBirth_ages15to50_black * 10000 / nr_unmarriedWomen_didNotBirth_ages15to50_black,
-                0
-            ),
+            nr_unmarriedWomen_gaveBirth_ages15to50_black * 10000 /
+            (nr_unmarriedWomen_gaveBirth_ages15to50_black + nr_unmarriedWomen_didNotBirth_ages15to50_black),
         nrBirthsPer10000Unmarried_rate_est_ages15to50_w_f =
-            if_else(
-                nr_unmarriedWomen_didNotBirth_ages15to50_white != 0,
-                nr_unmarriedWomen_gaveBirth_ages15to50_white * 10000 / nr_unmarriedWomen_didNotBirth_ages15to50_white,
-                0
-            ),
+            nr_unmarriedWomen_gaveBirth_ages15to50_white * 10000 /
+            (nr_unmarriedWomen_gaveBirth_ages15to50_white + nr_unmarriedWomen_didNotBirth_ages15to50_white),
         nrBirthsPer10000Unmarried_rate_est_ages15to50_h_f =
-            if_else(
-                nr_unmarriedWomen_didNotBirth_ages15to50_hisp != 0,
-                nr_unmarriedWomen_gaveBirth_ages15to50_hisp * 10000 / nr_unmarriedWomen_didNotBirth_ages15to50_hisp,
-                0
-            ),
-        blackToWhiteUnmmarriedBirthRate_ratio_est =
-            if_else(
-                nrBirthsPer10000Unmarried_rate_est_ages15to50_w_f != 0,
-                nrBirthsPer10000Unmarried_rate_est_ages15to50_b_f / nrBirthsPer10000Unmarried_rate_est_ages15to50_w_f,
-                0
-            ),
-        hispToWhiteUnmmarriedBirthRate_ratio_est =
-            if_else(
-                nrBirthsPer10000Unmarried_rate_est_ages15to50_w_f != 0,
-                nrBirthsPer10000Unmarried_rate_est_ages15to50_h_f / nrBirthsPer10000Unmarried_rate_est_ages15to50_w_f,
-                0
-            )
+            nr_unmarriedWomen_gaveBirth_ages15to50_hisp * 10000 /
+            (nr_unmarriedWomen_gaveBirth_ages15to50_hisp + nr_unmarriedWomen_didNotBirth_ages15to50_hisp),
+        blackToWhiteUnmarriedBirthRate_diff_est =
+            nrBirthsPer10000Unmarried_rate_est_ages15to50_b_f - nrBirthsPer10000Unmarried_rate_est_ages15to50_w_f,
+        hispToWhiteUnmarriedBirthRate_diff_est =
+            nrBirthsPer10000Unmarried_rate_est_ages15to50_h_f - nrBirthsPer10000Unmarried_rate_est_ages15to50_w_f
     ) |>
-    select(matches("^year$|full_fips|^state$|^county$|prcnt_est|ratio|_rate_"))
+    select(matches("^year$|full_fips|^state$|^county$|diff_est"))
 
 ################################################################################
 # Health insurance.
@@ -822,76 +558,31 @@ df_health_insurance <-
     acs_df |>
     mutate(
         hasHealthInsurance_prcnt_est_allAges_b =
-            if_else(
-                total_pop_civilianNonInst_black != 0,
-                (
-                    has_healthInsurance_under19_black + has_healthInsurance_19to64_black + has_healthInsurance_above65_black
-                ) /
-                    total_pop_civilianNonInst_black,
-                0
-            ),
+            (has_healthInsurance_under19_black + has_healthInsurance_19to64_black + has_healthInsurance_above65_black) / total_pop_civilianNonInst_black,
         hasHealthInsurance_prcnt_est_allAges_w =
-            if_else(
-                total_pop_civilianNonInst_white != 0,
-                (
-                    has_healthInsurance_under19_white + has_healthInsurance_19to64_white + has_healthInsurance_above65_white
-                ) /
-                    total_pop_civilianNonInst_white,
-                0
-            ),
+            (has_healthInsurance_under19_white + has_healthInsurance_19to64_white + has_healthInsurance_above65_white) / total_pop_civilianNonInst_white,
         hasHealthInsurance_prcnt_est_allAges_h =
-            if_else(
-                total_pop_civilianNonInst_hisp != 0,
-                (
-                    has_healthInsurance_under19_hisp + has_healthInsurance_19to64_hisp + has_healthInsurance_above65_hisp
-                ) /
-                    total_pop_civilianNonInst_hisp,
-                0
-            ),
-        blackToWhiteHealthInsurance_ratio_est =
-            if_else(
-                hasHealthInsurance_prcnt_est_allAges_w != 0,
-                hasHealthInsurance_prcnt_est_allAges_b / hasHealthInsurance_prcnt_est_allAges_w,
-                0
-            ),
-        hispToWhiteHealthInsurance_ratio_est =
-            if_else(
-                hasHealthInsurance_prcnt_est_allAges_w != 0,
-                hasHealthInsurance_prcnt_est_allAges_h / hasHealthInsurance_prcnt_est_allAges_w,
-                0
-            ),
-        hasHealthInsurance_prcnt_est_under18_b =
-            if_else(black_6to18_healthInsurance_denom != 0, has_healthInsurance_under19_black / black_6to18_healthInsurance_denom, 0),
-        hasHealthInsurance_prcnt_est_under18_w =
-            if_else(white_6to18_healthInsurance_denom != 0, has_healthInsurance_under19_white / white_6to18_healthInsurance_denom, 0),
-        hasHealthInsurance_prcnt_est_under18_h =
-            if_else(hisp_6to18_healthInsurance_denom != 0, has_healthInsurance_under19_hisp / hisp_6to18_healthInsurance_denom, 0),
-        blackToWhiteChildHealthInsurance_ratio_est =
-            if_else(
-                hasHealthInsurance_prcnt_est_under18_w != 0,
-                hasHealthInsurance_prcnt_est_under18_b / hasHealthInsurance_prcnt_est_under18_w,
-                0
-            ),
-        hispToWhiteChildHealthInsurance_ratio_est =
-            if_else(
-                hasHealthInsurance_prcnt_est_under18_w != 0,
-                hasHealthInsurance_prcnt_est_under18_h / hasHealthInsurance_prcnt_est_under18_w,
-                0
-            )
+            (has_healthInsurance_under19_hisp + has_healthInsurance_19to64_hisp + has_healthInsurance_above65_hisp) / total_pop_civilianNonInst_hisp,
+        blackToWhiteHealthInsurance_diff_est = hasHealthInsurance_prcnt_est_allAges_b - hasHealthInsurance_prcnt_est_allAges_w,
+        hispToWhiteHealthInsurance_diff_est = hasHealthInsurance_prcnt_est_allAges_h - hasHealthInsurance_prcnt_est_allAges_w,
+        hasHealthInsurance_prcnt_est_under18_b = has_healthInsurance_under19_black / black_6to18_healthInsurance_denom,
+        hasHealthInsurance_prcnt_est_under18_w = has_healthInsurance_under19_white / white_6to18_healthInsurance_denom,
+        hasHealthInsurance_prcnt_est_under18_h = has_healthInsurance_under19_hisp / hisp_6to18_healthInsurance_denom,
+        blackToWhiteChildHealthInsurance_diff_est = hasHealthInsurance_prcnt_est_under18_b - hasHealthInsurance_prcnt_est_under18_w,
+        hispToWhiteChildHealthInsurance_diff_est = hasHealthInsurance_prcnt_est_under18_h - hasHealthInsurance_prcnt_est_under18_w
     ) |>
-    select(matches("^year$|full_fips|^state$|^county$|prcnt_est|ratio"))
+    select(matches("^year$|full_fips|^state$|^county$|prcnt_est|diff_est"))
 
 ################################################################################
 # Save results.
 df_final <-
     reduce(
         list(
-            df_child, df_edu, df_fertility, df_health_insurance,
-            df_housing_costs, df_housing_problems, df_housing_values,
-            df_income_black, df_income_hisp, df_income_inequality,
-            df_income_white, df_labor, df_marriage_by_race, df_median_income,
-            df_mobility, df_occupants_per_room_by_race, df_paoc, df_paoc_race,
-            df_poverty, df_renters_by_race, df_snap, df_vehicle, df_welfare
+            df_child, df_edu, df_fertility, df_housing_costs,
+            df_housing_problems, df_housing_values, df_income_inequality,
+            df_labor, df_marriage_by_race, df_median_income, df_mobility,
+            df_occupants_per_room_by_race, df_paoc, df_paoc_race, df_poverty,
+            df_renters_by_race, df_snap, df_vehicle, df_welfare
         ),
         function(x, y) {
             full_join(x, y, by = c("year", "full_fips", "state", "county"))

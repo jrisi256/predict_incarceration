@@ -29,7 +29,7 @@ var_labels <-
 # Rename columns and keep only pertinent columns.
 saipe_county_clean <-
     saipe_county |>
-    rename(var_labels) |>
+    rename(all_of(var_labels)) |>
     select(matches("prcnt_est|median_est|fips|year|state|county"))
 
 # Save cleaned data.

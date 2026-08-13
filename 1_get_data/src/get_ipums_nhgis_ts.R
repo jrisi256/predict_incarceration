@@ -18,24 +18,24 @@ download_ipums_timeseries <- function(table_arg, geog_arg, years_arg, dir) {
 
 ################################################################################
 # See all time series data sets available from IPUMS.
-time_series_datasets <- get_metadata_nhgis(type = "time_series_tables")
+time_series_datasets <- get_metadata_catalog("nhgis", "time_series_tables")
 
 # Get information on time series tables of interest.
-meta_sex_by_age <- get_metadata_nhgis(time_series_table = "B58")
-meta_race_by_ethnicity <- get_metadata_nhgis(time_series_table = "AE7")
-meta_family_paoc <- get_metadata_nhgis(time_series_table = "AG4")
-meta_marriage <- get_metadata_nhgis(time_series_table = "BL1")
-meta_edu <- get_metadata_nhgis(time_series_table = "BW7")
-meta_labor <- get_metadata_nhgis(time_series_table = "B84")
-meta_labor_sex <- get_metadata_nhgis(time_series_table = "BS4")
-meta_hh_income_1980 <- get_metadata_nhgis(time_series_table = "B70")
-meta_hh_income <- get_metadata_nhgis(time_series_table = "B71")
-meta_median_hh_income <- get_metadata_nhgis(time_series_table = "B79")
-meta_poverty <- get_metadata_nhgis(time_series_table = "CL7")
-meta_occupancy <- get_metadata_nhgis(time_series_table = "A43")
-meta_owner_renter <- get_metadata_nhgis(time_series_table = "A40")
-meta_owner_renter_race <- get_metadata_nhgis(time_series_table = "D03")
-meta_poverty_children <- get_metadata_nhgis(time_series_table = "BV3")
+meta_sex_by_age <- get_metadata("nhgis", time_series_table = "B58")
+meta_race_by_ethnicity <- get_metadata("nhgis", time_series_table = "AE7")
+meta_family_paoc <- get_metadata("nhgis", time_series_table = "AG4")
+meta_marriage <- get_metadata("nhgis", time_series_table = "BL1")
+meta_edu <- get_metadata("nhgis", time_series_table = "BW7")
+meta_labor <- get_metadata("nhgis", time_series_table = "B84")
+meta_labor_sex <- get_metadata("nhgis", time_series_table = "BS4")
+meta_hh_income_1980 <- get_metadata("nhgis", time_series_table = "B70")
+meta_hh_income <- get_metadata("nhgis", time_series_table = "B71")
+meta_median_hh_income <- get_metadata("nhgis", time_series_table = "B79")
+meta_poverty <- get_metadata("nhgis", time_series_table = "CL7")
+meta_occupancy <- get_metadata("nhgis", time_series_table = "A43")
+meta_owner_renter <- get_metadata("nhgis", time_series_table = "A40")
+meta_owner_renter_race <- get_metadata("nhgis", time_series_table = "D03")
+meta_poverty_children <- get_metadata("nhgis", time_series_table = "BV3")
 
 # For time series where we want a lot of years, filter to the year we want.
 years_family_paoc <- meta_family_paoc$years |> filter(name != "1970") |> pull(description)

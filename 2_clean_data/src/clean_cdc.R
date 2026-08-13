@@ -7,13 +7,13 @@ library(stringr)
 ################################################################################
 # List all CDC time series data.
 cdc_filepaths_deaths <-
-    list.files(here("1_get_data", "output"), pattern = "cdc_d", full.names = T)
+    list.files(here("2_clean_data", "input"), pattern = "cdc_d", full.names = T)
 
 cdc_filepaths_homicides <-
-    list.files(here("1_get_data", "output"), pattern = "cdc_h", full.names = T)
+    list.files(here("2_clean_data", "input"), pattern = "cdc_h", full.names = T)
 
 cdc_filepaths_nonH <-
-    list.files(here("1_get_data", "output"), pattern = "cdc_n", full.names = T)
+    list.files(here("2_clean_data", "input"), pattern = "cdc_n", full.names = T)
 
 # Read in the time series tables of interest.
 read_cdc_data <- function(filepath) {
