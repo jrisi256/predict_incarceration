@@ -217,3 +217,40 @@ graph_diff <-
 ggsave(
     file.path(graph_dir, "model_diff.png"), graph_diff, width = 14, height = 12
 )
+
+################################################################################
+# Sub-graph for presentation.
+################################################################################
+graph_diff_pres <-
+    summ_diff |>
+    filter(
+        .metric == "Coefficient of Determination", xgboost_model == "xgboost1"
+    ) |>
+    ggplot(aes(x = comp_model, y = estimate)) +
+    geom_point(aes(color = comp_model_type), size = 3) +
+    geom_errorbar(
+        aes(
+            ymin = ci_lower_999,
+            ymax = ci_upper_999,
+            color = comp_model_type,
+            linetype = comp_model_type
+        ),
+        linewidth = 1
+    ) +
+    theme_bw() +
+    coord_flip() +
+    facet_wrap(~.metric, scale = "free_x", nrow = 2) +
+    geom_hline(yintercept = 0) +
+    labs(
+        color = "Model Type",
+        linetype = "Model Type",
+        x = "Difference in predictive power",
+        y = "Comparison Model",
+        title = "Comparison of best performing model (XGBoost) with all other models"
+    ) +
+    theme(
+        axis.text = element_text(size = 11),
+        strip.text = element_text(size = 12),
+        axis.title = element_text(size = 12),
+        legend.text = element_text(size = 12)
+    )
